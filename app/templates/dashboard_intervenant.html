@@ -75,7 +75,7 @@
                                 class="px-3 py-1 bg-white text-brand-600 text-xs font-bold rounded-full border border-brand-100 shadow-sm">
                                 Bientôt
                             </span>
-                            <button @click="openDeleteModal('{{ intervention.id }}')"
+                            <button onclick="openDeleteModal('{{ intervention.id }}')"
                                 class="p-1 text-slate-400 hover:text-red-500 transition-colors rounded-full hover:bg-red-50"
                                 title="Demander la suppression">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -197,7 +197,7 @@
                         </td>
                         <td class="p-4 text-right">
                             {% if intervention.status != 'DeletionRequested' %}
-                            <button @click="openDeleteModal('{{ intervention.id }}')"
+                            <button onclick="openDeleteModal('{{ intervention.id }}')"
                                 class="text-slate-400 hover:text-red-500 transition-colors"
                                 title="Demander la suppression">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
