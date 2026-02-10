@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800">{{ user.username }}</h1>
+            <p class="text-slate-500 mt-1">Intervenant</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ url_for('main.dashboard_admin') }}"
+                class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors">
+                Retour
+            </a>
+            <a href="{{ url_for('main.edit_intervenant', user_id=user.id) }}"
+                class="px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/30">
+                Modifier
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Stats Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest mb-4">Activité</h3>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-600">Total Interventions</span>
+                    <span class="text-2xl font-bold text-slate-800">{{ interventions|length }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-600">En cours</span>
+                    <span class="text-xl font-bold text-amber-500">{{ interventions | selectattr("end_time", "none") |
+                        list | length }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest mb-4">Services Proposés</h3>
+            {% if user.services %}
+            <div class="flex flex-wrap gap-2">
+                {% for service in user.services %}
+                <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium">
+                    {{ service.name }}
+                </span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-slate-400 italic text-sm">Aucun service assigné.</p>
+            {% endif %}
+        </div>
+
+        <!-- Clients Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest mb-4">Clients Assignés</h3>
+            {% if user.clients %}
+            <div class="space-y-2 max-h-32 overflow-y-auto">
+                {% for client in user.clients %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="font-medium text-slate-700">{{ client.name }}</span>
+                    <a href="{{ url_for('main.client_details', client_id=client.id) }}"
+                        class="text-brand-600 hover:text-brand-800 text-xs">Aperçu</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-slate-400 italic text-sm">Aucun client assigné.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Intervention History -->
+    <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 text-lg">Historique des Interventions</h3>
+        </div>
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50/80 border-b border-slate-100">
+                <tr>
+                    <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Début</th>
+                    <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Fin</th>
+                    <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Client</th>
+                    <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Service</th>
+                    <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Statut</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for intervention in interventions %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="p-4 text-sm text-slate-800 font-medium">
+                        {{ intervention.start_time.strftime('%d/%m/%Y') }}
+                        <span class="text-slate-400 text-xs block">{{ intervention.start_time.strftime('%H:%M')
+                            }}</span>
+                    </td>
+                    <td class="p-4 text-sm text-slate-600">
+                        {% if intervention.end_time %}
+                        {{ intervention.end_time.strftime('%d/%m/%Y') }}
+                        <span class="text-slate-400 text-xs block">{{ intervention.end_time.strftime('%H:%M') }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-sm text-slate-600">
+                        {% if intervention.client %}
+                        <a href="{{ url_for('main.client_details', client_id=intervention.client.id) }}"
+                            class="hover:text-brand-600 hover:underline">
+                            {{ intervention.client.name }}
+                        </a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="p-4">
+                        <span
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                            {{ intervention.service.name if intervention.service else 'N/A' }}
+                        </span>
+                    </td>
+                    <td class="p-4">
+                        {% if intervention.end_time %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Terminé</span>
+                        {% else %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">En
+                            cours</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-slate-400">Aucune intervention effectuée.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div x-data="{ tab: 'interventions' }">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800">Tableau de Bord Admin</h1>
+                <p class="text-slate-500">Vue d'ensemble de l'activité</p>
+            </div>
+            <div class="flex gap-2">
+                <!-- Quick Actions -->
+                <a href="{{ url_for('main.add_intervenant') }}"
+                    class="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/30 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Ajouter Intervenant
+                </a>
+                <a href="{{ url_for('main.add_client') }}"
+                    class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors shadow-lg shadow-teal-500/30 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Ajouter Client
+                    Ajouter Client
+                </a>
+                <button @click="$dispatch('open-admin-schedule-modal')"
+                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Programmer
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Review -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest">Total Interventions</h3>
+                <p class="text-3xl font-bold text-slate-800 mt-2">{{ interventions|length }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest">En cours</h3>
+                <p class="text-3xl font-bold text-brand-500 mt-2">
+                    {{ interventions | selectattr("end_time", "none") | list | length }}
+                </p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-medium text-slate-500 uppercase tracking-widest">Intervenants Actifs</h3>
+                <p class="text-3xl font-bold text-slate-800 mt-2">{{ intervenants|length }}</p>
+            </div>
+        </div>
+
+        <!-- Deletion Requests Alert -->
+        {% set deletion_requests = interventions|selectattr("status", "equalto", "DeletionRequested")|list %}
+        {% if deletion_requests %}
+        <div class="mb-8 bg-red-50 border border-red-200 rounded-2xl p-6">
+            <h3 class="font-bold text-red-800 text-lg mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Demandes de Suppression en Attente ({{ deletion_requests|length }})
+            </h3>
+            <div class="overflow-x-auto bg-white rounded-xl border border-red-100 shadow-sm">
+                <table class="w-full text-left">
+                    <thead class="bg-red-50/50 border-b border-red-100">
+                        <tr>
+                            <th class="p-4 text-xs font-semibold text-red-800 uppercase">Date</th>
+                            <th class="p-4 text-xs font-semibold text-red-800 uppercase">Intervenant</th>
+                            <th class="p-4 text-xs font-semibold text-red-800 uppercase">Client</th>
+                            <th class="p-4 text-xs font-semibold text-red-800 uppercase">Motif</th>
+                            <th class="p-4 text-xs font-semibold text-red-800 uppercase text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-red-50">
+                        {% for request in deletion_requests %}
+                        <tr>
+                            <td class="p-4 text-sm font-medium text-slate-700">{{ request.start_time.strftime('%d/%m
+                                %H:%M') }}</td>
+                            <td class="p-4 text-sm text-slate-700">{{ request.intervenant.username }}</td>
+                            <td class="p-4 text-sm text-slate-700">{{ request.client.name }}</td>
+                            <td class="p-4 text-sm text-slate-700 italic">"{{ request.cancellation_reason }}"</td>
+                            <td class="p-4 text-right space-x-2">
+                                <form action="{{ url_for('main.delete_intervention', intervention_id=request.id) }}"
+                                    method="POST" class="inline-flex">
+                                    <button type="submit" name="action" value="approve"
+                                        class="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700 transition-colors">
+                                        Supprimer
+                                    </button>
+                                    <button type="submit" name="action" value="reject"
+                                        class="ml-2 px-3 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded hover:bg-slate-300 transition-colors">
+                                        Rejeter
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabs Navigation -->
+        <div class="flex gap-2 mb-6 border-b border-slate-200 pb-1">
+            <button @click="tab = 'interventions'"
+                :class="{ 'border-brand-500 text-brand-600': tab === 'interventions', 'border-transparent text-slate-500 hover:text-slate-700': tab !== 'interventions' }"
+                class="px-4 py-2 border-b-2 font-medium transition-colors">Interventions</button>
+            <button @click="tab = 'intervenants'"
+                :class="{ 'border-brand-500 text-brand-600': tab === 'intervenants', 'border-transparent text-slate-500 hover:text-slate-700': tab !== 'intervenants' }"
+                class="px-4 py-2 border-b-2 font-medium transition-colors">Intervenants</button>
+            <button @click="tab = 'clients'"
+                :class="{ 'border-brand-500 text-brand-600': tab === 'clients', 'border-transparent text-slate-500 hover:text-slate-700': tab !== 'clients' }"
+                class="px-4 py-2 border-b-2 font-medium transition-colors">Clients</button>
+        </div>
+
+        <!-- Tab Content: Interventions -->
+        <div x-show="tab === 'interventions'"
+            class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/80 border-b border-slate-100">
+                    <tr>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">ID</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Intervenant</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Client</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Service</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Début</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Fin</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Statut</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for intervention in interventions %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="p-4 text-xs font-mono text-slate-400">#{{ intervention.id }}</td>
+                        <td class="p-4 text-sm font-medium text-slate-800">{{ intervention.intervenant.username }}</td>
+                        <td class="p-4 text-sm text-slate-600">{{ intervention.client.name if intervention.client else
+                            'N/A' }}</td>
+                        <td class="p-4">
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                                {{ intervention.service.name if intervention.service else 'N/A' }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">{{ intervention.start_time.strftime('%d/%m %H:%M') }}
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">
+                            {% if intervention.end_time %}
+                            {{ intervention.end_time.strftime('%d/%m %H:%M') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="p-4">
+                            {% if intervention.status == 'DeletionRequested' %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Suppression demandée
+                            </span>
+                            {% elif intervention.status == 'Scheduled' %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Programmé
+                            </span>
+                            {% elif intervention.status == 'InProgress' or (not intervention.end_time and
+                            intervention.status != 'Scheduled') %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">
+                                En cours
+                            </span>
+                            {% elif intervention.status == 'Completed' or intervention.end_time %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Terminé
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-400">Aucune intervention.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tab Content: Intervenants -->
+        <div x-show="tab === 'intervenants'" style="display: none;"
+            class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/80 border-b border-slate-100">
+                    <tr>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">ID</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Identifiant</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Rôle</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for user in intervenants %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="p-4 text-xs font-mono text-slate-400">#{{ user.id }}</td>
+                        <td class="p-4 text-sm font-bold text-slate-800">
+                            <a href="{{ url_for('main.intervenant_details', user_id=user.id) }}"
+                                class="hover:text-brand-600 hover:underline transition-colors">
+                                {{ user.username }}
+                            </a>
+                        </td>
+                        <td class="p-4">
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-100 text-brand-800">
+                                Intervenant
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="p-8 text-center text-slate-400">Aucun intervenant.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tab Content: Clients -->
+        <div x-show="tab === 'clients'" style="display: none;"
+            class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/80 border-b border-slate-100">
+                    <tr>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">ID</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Nom Famille</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Adresse</th>
+                        <th class="p-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Compte Lié</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for client in clients %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="p-4 text-xs font-mono text-slate-400">#{{ client.id }}</td>
+                        <td class="p-4 text-sm font-bold text-slate-800">
+                            <a href="{{ url_for('main.client_details', client_id=client.id) }}"
+                                class="hover:text-teal-600 hover:underline transition-colors">
+                                {{ client.name }}
+                            </a>
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">{{ client.address or 'Non renseignée' }}</td>
+                        <td class="p-4 text-sm font-mono text-teal-600">@{{ client.user_id }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="p-8 text-center text-slate-400">Aucun client.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Admin Schedule Modal -->
+    <div x-data="{ open: false }" @open-admin-schedule-modal.window="open = true" x-show="open" style="display: none;"
+        class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+
+        <!-- Backdrop -->
+        <div x-show="open" x-transition.opacity class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity"
+            aria-hidden="true" @click="open = false"></div>
+
+        <!-- Modal Panel -->
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div x-show="open" x-transition.scale
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <form action="{{ url_for('main.admin_schedule_intervention') }}" method="POST">
+                    <div class="bg-white p-6">
+                        <div class="sm:flex sm:items-start">
+                            <div
+                                class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-slate-900" id="modal-title">
+                                    Programmer une Intervention
+                                </h3>
+                                <div class="mt-4 space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Intervenant</label>
+                                        <select name="intervenant_id" required
+                                            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            {% for intervenant in intervenants %}
+                                            <option value="{{ intervenant.id }}">{{ intervenant.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Client</label>
+                                        <select name="client_id" required
+                                            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            {% for client in clients %}
+                                            <option value="{{ client.id }}">{{ client.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 mb-1">Service</label>
+                                        <select name="service_id" required
+                                            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                            {% for service in services %}
+                                            <option value="{{ service.id }}">{{ service.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                            <input type="date" name="date" required
+                                                class="w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Heure</label>
+                                            <input type="time" name="time" required
+                                                class="w-full rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Programmer
+                        </button>
+                        <button type="button" @click="open = false"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

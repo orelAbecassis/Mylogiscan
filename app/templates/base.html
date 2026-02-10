@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mylogiscan - Gestion d'Interventions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6', // Blue 500
+                            600: '#2563eb', // Blue 600
+                            700: '#1d4ed8', // Blue 700
+                            900: '#1e3a8a', // Blue 900
+                        },
+                        accent: {
+                            500: '#14b8a6', // Teal 500
+                            600: '#0d9488', // Teal 600
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="flex items-center gap-2 group">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Mylogiscan"
+                    class="h-12 w-auto group-hover:scale-105 transition-transform">
+            </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.logout') }}"
+                class="text-sm font-semibold text-slate-500 hover:text-brand-600 transition-colors bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-full">
+                Déconnexion
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-6 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="max-w-4xl mx-auto mb-8 space-y-2">
+            {% for category, message in messages %}
+            <div class="p-4 rounded-xl shadow-sm border border-l-4 flex items-center gap-3
+                        {% if category == 'success' %} bg-green-50 border-green-500 text-green-700
+                        {% elif category == 'danger' %} bg-red-50 border-red-500 text-red-700
+                        {% else %} bg-blue-50 border-blue-500 text-blue-700 {% endif %}">
+                <span class="font-medium">{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-auto py-8">
+        <div class="container mx-auto px-6 text-center text-slate-500 text-sm">
+            <p>&copy; 2024 Mylogiscan. Tous droits réservés.</p>
+        </div>
+    </footer>
+</body>
+
+</html>

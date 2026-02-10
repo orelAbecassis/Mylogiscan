@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800">Mon Historique</h1>
+            <p class="text-slate-500">Retrouvez toutes vos interventions passées</p>
+        </div>
+        <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-100 text-sm font-medium text-slate-600">
+            Client: {{ current_user.username }}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50/80 border-b border-slate-100">
+                <tr>
+                    <th class="p-5 font-semibold text-slate-500 text-sm uppercase tracking-wider">Date</th>
+                    <th class="p-5 font-semibold text-slate-500 text-sm uppercase tracking-wider">Intervenant</th>
+                    <th class="p-5 font-semibold text-slate-500 text-sm uppercase tracking-wider">Service</th>
+                    <th class="p-5 font-semibold text-slate-500 text-sm uppercase tracking-wider">Durée</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for intervention in history %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="p-5 text-slate-700 font-medium">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {{ intervention.start_time.strftime('%d/%m/%Y') }}
+                            <span class="text-slate-400 text-xs ml-1">{{ intervention.start_time.strftime('%H:%M')
+                                }}</span>
+                        </div>
+                    </td>
+                    <td class="p-5">
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                            {{ intervention.intervenant.username }}
+                        </span>
+                    </td>
+                    <td class="p-5 text-slate-600">{{ intervention.service.name }}</td>
+                    <td class="p-5 font-mono text-sm text-slate-500">
+                        {% if intervention.end_time %}
+                        {{ ((intervention.end_time - intervention.start_time).seconds // 60) }} min
+                        {% else %}
+                        <span class="flex h-2 w-2 relative">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="p-10 text-center text-slate-400">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="w-10 h-10 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            Aucune intervention pour le moment.
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
