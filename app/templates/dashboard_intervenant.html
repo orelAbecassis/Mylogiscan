@@ -20,10 +20,21 @@
         <!-- Scan Action Card -->
         <div class="lg:col-span-1">
             <div
-                class="bg-white rounded-2xl shadow-xl shadow-brand-500/10 border border-slate-100 p-8 text-center h-full flex flex-col items-center justify-center">
-                <h3 class="text-lg font-semibold text-slate-700 mb-6">Scanner un QR Code</h3>
-                <form action="{{ url_for('main.scan_qr') }}" method="POST" class="w-full flex justify-center">
-                    <button type="submit"
+                class="bg-white rounded-2xl shadow-xl shadow-brand-500/10 border border-slate-100 p-8 text-center h-full flex flex-col items-center justify-center relative overflow-hidden">
+                <h3 class="text-lg font-semibold text-slate-700 mb-6" id="scan-title">Scanner un QR Code</h3>
+
+                <!-- Scanner Interface (Hidden by default) -->
+                <div id="scanner-ui" class="w-full hidden flex-col items-center">
+                    <div id="reader" class="w-full rounded-xl overflow-hidden border-2 border-slate-200"></div>
+                    <button onclick="stopScanner()"
+                        class="mt-4 px-4 py-2 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors">
+                        Annuler le scan
+                    </button>
+                </div>
+
+                <!-- Start Button (Visible by default) -->
+                <div id="start-scan-ui" class="w-full flex flex-col items-center">
+                    <button onclick="startScanner()"
                         class="group relative w-48 h-48 rounded-[2rem] bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-2xl shadow-brand-500/40 border-[6px] border-white ring-4 ring-brand-100 hover:ring-brand-200 transition-all cursor-pointer flex flex-col items-center justify-center transform hover:scale-105 active:scale-95">
                         <svg xmlns="http://www.w3.org/2000/svg"
                             class="w-16 h-16 mb-2 group-hover:rotate-12 transition-transform duration-300" fill="none"
@@ -33,9 +44,89 @@
                         </svg>
                         <span class="text-2xl font-bold tracking-wider">SCAN</span>
                     </button>
-                </form>
-                <p class="text-slate-400 text-sm mt-6">Cliquez pour valider une intervention</p>
+                    <p class="text-slate-400 text-sm mt-6">Cliquez pour valider une intervention</p>
+                </div>
             </div>
+
+            <!-- QR Code Scanner Logic -->
+            <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+            <script>
+                let html5QrcodeScanner = null;
+
+                function startScanner() {
+                    document.getElementById('start-scan-ui').classList.add('hidden');
+                    document.getElementById('scanner-ui').classList.remove('hidden');
+                    document.getElementById('scanner-ui').classList.add('flex');
+                    document.getElementById('scan-title').innerText = "Visez le QR Code";
+
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader",
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            aspectRatio: 1.0
+                        },
+                        /* verbose= */ false
+                    );
+                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                }
+
+                function stopScanner() {
+                    if (html5QrcodeScanner) {
+                        html5QrcodeScanner.clear().then(_ => {
+                            resetUI();
+                        }).catch(error => {
+                            console.error("Failed to clear html5QrcodeScanner. ", error);
+                            resetUI();
+                        });
+                    } else {
+                        resetUI();
+                    }
+                }
+
+                function resetUI() {
+                    document.getElementById('start-scan-ui').classList.remove('hidden');
+                    document.getElementById('scanner-ui').classList.add('hidden');
+                    document.getElementById('scanner-ui').classList.remove('flex');
+                    document.getElementById('scan-title').innerText = "Scanner un QR Code";
+                }
+
+                function onScanSuccess(decodedText, decodedResult) {
+                    console.log(`Code matched = ${decodedText}`, decodedResult);
+
+                    // Stop scanning immediately to prevent multiple triggers
+                    html5QrcodeScanner.clear();
+
+                    // Send data to backend
+                    fetch('/scan_qr', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ client_id: decodedText })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            resetUI();
+                            if (data.status === 'success') {
+                                alert(data.message);
+                                window.location.reload();
+                            } else {
+                                alert('Erreur: ' + data.message);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error('Error:', error);
+                            resetUI();
+                            alert('Une erreur est survenue lors de la validation.');
+                        });
+                }
+
+                function onScanFailure(error) {
+                    // handle scan failure, usually better to ignore and keep scanning.
+                    // console.warn(`Code scan error = ${error}`);
+                }
+            </script>
         </div>
 
         <!-- Dashboard Content -->

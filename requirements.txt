@@ -2,5 +2,6 @@ Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-Migrate
-email_validator
+email-validator
+qrcode
 python-dotenv

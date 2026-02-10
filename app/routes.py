@@ -1,8 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User, Intervention, Service, Client
 from app.extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta, time
+import qrcode
+from io import BytesIO
 
 main = Blueprint('main', __name__)
 
@@ -115,34 +117,87 @@ def request_delete_intervention(intervention_id):
 @main.route('/scan_qr', methods=['POST'])
 @login_required
 def scan_qr():
-    # Simulation of QR scan action - In a real app this would process QR data
-    # For this prototype, the big button triggers a start/stop of service
+    if current_user.role != 'intervenant':
+        return redirect(url_for('main.index'))
     
-    # Logic: If last intervention is open -> Close it. Else -> Open new one.
-    last_intervention = Intervention.query.filter_by(intervenant_id=current_user.id).order_by(Intervention.start_time.desc()).first()
-    
-    if last_intervention and last_intervention.end_time is None:
-        # Close session
-        last_intervention.end_time = datetime.utcnow()
-        last_intervention.status = 'Completed'
-        db.session.commit()
-        flash('Service Terminé', 'success')
+    # Check if request is JSON (from scanner) or Form (from legacy button/testing)
+    if request.is_json:
+        data = request.get_json()
+        client_id_str = data.get('client_id')
     else:
-        # Start new session (Mock data for Service/Client since scanned QR would provide this)
-        # Using placeholder ID 1 for demonstration if not exists
-        # In real app, scan would match a scheduled intervention or create new
-        intervention = Intervention(
-            intervenant_id=current_user.id, 
-            service_id=1, 
-            client_id=1, 
-            start_time=datetime.utcnow(),
-            status='InProgress'
-        )
-        db.session.add(intervention)
-        db.session.commit()
-        flash('Service Commencé', 'success')
+        # Fallback for testing button if kept, or direct form post
+        client_id_str = request.form.get('client_id')
+
+    if not client_id_str:
+         return {'status': 'error', 'message': 'QR Code invalide'}, 400
+
+    try:
+        client_id = int(client_id_str)
+    except ValueError:
+        return {'status': 'error', 'message': 'ID Client invalide'}, 400
         
-    return redirect(url_for('main.dashboard_intervenant'))
+    client = Client.query.get(client_id)
+    if not client:
+        return {'status': 'error', 'message': 'Client inconnu'}, 404
+
+    # 1. Check for existing InProgress intervention to close
+    ongoing_intervention = Intervention.query.filter_by(
+        intervenant_id=current_user.id,
+        client_id=client_id,
+        status='InProgress'
+    ).first()
+
+    if ongoing_intervention:
+        ongoing_intervention.end_time = datetime.utcnow()
+        ongoing_intervention.status = 'Completed'
+        db.session.commit()
+        return {'status': 'success', 'message': f'Intervention terminée pour {client.name}', 'action': 'stop'}
+
+    # 2. Check for Scheduled intervention today to start
+    today = datetime.utcnow().date()
+    scheduled_intervention = Intervention.query.filter(
+        Intervention.intervenant_id == current_user.id,
+        Intervention.client_id == client_id,
+        Intervention.status == 'Scheduled',
+        Intervention.start_time >= datetime.combine(today, time.min),
+        Intervention.start_time <= datetime.combine(today, time.max)
+    ).first()
+
+    if scheduled_intervention:
+        scheduled_intervention.status = 'InProgress'
+        scheduled_intervention.start_time = datetime.utcnow() # Update start time to actual scan time
+        db.session.commit()
+        return {'status': 'success', 'message': f'Intervention démarrée pour {client.name}', 'action': 'start'}
+    
+    # 3. Create new intervention if nothing scheduled (On-demand)
+    # Default service ID 1 (Ménage) - In real app, might prompt or default differently
+    new_intervention = Intervention(
+        intervenant_id=current_user.id,
+        client_id=client_id,
+        service_id=1, 
+        start_time=datetime.utcnow(),
+        status='InProgress'
+    )
+    db.session.add(new_intervention)
+    db.session.commit()
+    
+    return {'status': 'success', 'message': f'Nouvelle intervention démarrée pour {client.name}', 'action': 'start'}
+
+@main.route('/client/<int:client_id>/qrcode')
+@login_required
+def generate_qr_code(client_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('main.index'))
+        
+    # Generate QR Code
+    img = qrcode.make(str(client_id))
+    
+    # Save to BytesIO
+    buf = BytesIO()
+    img.save(buf)
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='image/png', as_attachment=False, download_name=f'qrcode_client_{client_id}.png')
 
 
 @main.route('/dashboard/client')
